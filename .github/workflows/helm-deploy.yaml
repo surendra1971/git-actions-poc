@@ -40,7 +40,7 @@ jobs:
       - name: Replace $(ENV) in all YAMLs
         run: |
           mkdir rendered
-          for file in central-config/helm-configs/*.yaml; do
+          for file in helm-configs/*.yaml; do
             fname=$(basename "$file")
             sed "s/\\$(ENV)/${{ steps.env.outputs.env }}/g" "$file" > "rendered/$fname"
           done
@@ -52,3 +52,4 @@ jobs:
             helm upgrade --install "$(basename "$file" .yaml)" ./charts/yourchart \
               --values "$file" --namespace your-ns --create-namespace
           done
+
