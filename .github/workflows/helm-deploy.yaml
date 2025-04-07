@@ -5,13 +5,12 @@ on:
     branches:
       - d01
       - s01
-  workflow_dispatch:  # This allows manual triggering of the workflow
+  workflow_dispatch: # This allows manual triggering of the workflow
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout current branch (triggered branch)
         uses: actions/checkout@v3
 
@@ -24,18 +23,19 @@ jobs:
       - name: Determine ENV name
         id: env
         run: |
-          echo "GITHUB_REF=$GITHUB_REF"
           BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Extracted BRANCH=$BRANCH"
+
           if [[ "$BRANCH" == "d01" ]]; then
             echo "env=dev" >> $GITHUB_OUTPUT
           elif [[ "$BRANCH" == "s01" ]]; then
             echo "env=stage" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH" == "main" ]]; then
+            echo "env=dev" >> $GITHUB_OUTPUT # or whatever default
           else
             echo "Unknown branch: $BRANCH"
             exit 1
           fi
-
-
 
       - name: Replace $(ENV) in all YAMLs
         run: |
@@ -45,11 +45,18 @@ jobs:
             sed "s/\\$(ENV)/${{ steps.env.outputs.env }}/g" "$file" > "rendered/$fname"
           done
 
-      - name: Apply with Helm (or dry run first)
+      - name: Helm Dry Run
+        run: |
+          for file in rendered/*.yaml; do
+            echo "Dry run for $file..."
+            helm upgrade --install --dry-run "$(basename "$file" .yaml)" ./charts/yourchart \
+              --values "$file" --namespace your-ns --create-namespace
+          done
+
+      - name: Apply with Helm
         run: |
           for file in rendered/*.yaml; do
             echo "Deploying $file..."
             helm upgrade --install "$(basename "$file" .yaml)" ./charts/yourchart \
               --values "$file" --namespace your-ns --create-namespace
           done
-
