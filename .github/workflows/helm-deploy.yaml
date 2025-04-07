@@ -1,0 +1,47 @@
+name: Helm Deploy for d01/s01
+
+on:
+  push:
+    branches:
+      - d01
+      - s01
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout centralized config from main
+        uses: actions/checkout@v3
+        with:
+          ref: main
+          path: central-config
+
+      - name: Determine ENV name
+        id: env
+        run: |
+          BRANCH="${GITHUB_REF##*/}"
+          if [[ "$BRANCH" == "d01" ]]; then
+            echo "env=dev" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH" == "s01" ]]; then
+            echo "env=stage" >> $GITHUB_OUTPUT
+          else
+            echo "Unknown branch"
+            exit 1
+          fi
+
+      - name: Replace $(ENV) in all YAMLs
+        run: |
+          mkdir rendered
+          for file in central-config/helm-configs/*.yaml; do
+            fname=$(basename "$file")
+            sed "s/\\$(ENV)/${{ steps.env.outputs.env }}/g" "$file" > "rendered/$fname"
+          done
+
+      - name: Apply with Helm (or dry run first)
+        run: |
+          for file in rendered/*.yaml; do
+            echo "Deploying $file..."
+            helm upgrade --install "$(basename "$file" .yaml)" ./charts/yourchart \
+              --values "$file" --namespace your-ns --create-namespace
+          done
