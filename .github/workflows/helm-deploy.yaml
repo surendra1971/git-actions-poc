@@ -21,15 +21,17 @@ jobs:
       - name: Determine ENV name
         id: env
         run: |
-          BRANCH="${GITHUB_REF##*/}"
+          echo "GITHUB_REF=$GITHUB_REF"
+          BRANCH="${GITHUB_REF#refs/heads/}"
           if [[ "$BRANCH" == "d01" ]]; then
             echo "env=dev" >> $GITHUB_OUTPUT
           elif [[ "$BRANCH" == "s01" ]]; then
             echo "env=stage" >> $GITHUB_OUTPUT
           else
-            echo "Unknown branch"
+            echo "Unknown branch: $BRANCH"
             exit 1
           fi
+
 
       - name: Replace $(ENV) in all YAMLs
         run: |
