@@ -1,0 +1,4 @@
+load_balancers:
+  - name: dcp-ccai-dfcx-webhook
+    location: us-central1
+    hostname: cr-webhook-$(ENV).int.dev.gcp.bestbuy.com
